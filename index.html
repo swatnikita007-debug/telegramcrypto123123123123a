@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Galaxy Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        h1 {
+            color: var(--tg-theme-link-color);
+        }
+        button {
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        #user-info {
+            background-color: var(--tg-theme-secondary-bg-color);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>✨ Crypto Galaxy Mini App</h1>
+
+    <div id="user-info">
+        <h3>👤 Ваши данные (Получены из SDK):</h3>
+        <p id="tg-id">TG ID: Загрузка...</p>
+        <p id="first-name">Имя: Загрузка...</p>
+        <p id="username">Username: Загрузка...</p>
+    </div>
+
+    <h2>🚀 Интерактивные действия</h2>
+    <button onclick="requestBalance()">Показать баланс USDT в чате</button>
+    <button onclick="closeApp()">Закрыть WebApp</button>
+
+    <script>
+        // Проверка инициализации WebApp
+        if (window.Telegram.WebApp) {
+            const WebApp = window.Telegram.WebApp;
+            WebApp.ready();
+
+            const user = WebApp.initDataUnsafe.user;
+            
+            // 1. ПОЛУЧЕНИЕ ДАННЫХ
+            document.getElementById('tg-id').innerText = 'TG ID: ' + user.id;
+            document.getElementById('first-name').innerText = 'Имя: ' + (user.first_name || 'N/A');
+            document.getElementById('username').innerText = 'Username: ' + (user.username ? '@' + user.username : 'N/A');
+
+            // Устанавливаем основную кнопку WebApp
+            WebApp.MainButton.text = "Открыть Кошелек";
+            WebApp.MainButton.show();
+            WebApp.MainButton.onClick(openWallet);
+            
+            // 2. ОТПРАВКА ДАННЫХ (при нажатии MainButton)
+            function openWallet() {
+                // Отправляем данные (payload) боту, которые он может обработать как команду
+                const payload = {
+                    action: 'open_wallet',
+                    currency: 'USDT'
+                };
+                WebApp.sendData(JSON.stringify(payload));
+                WebApp.close();
+            }
+            
+            // 3. ОТПРАВКА КОМАНДЫ (из обычной кнопки)
+            function requestBalance() {
+                // Отправляем команду боту, чтобы он выполнил действие в чате
+                WebApp.HapticFeedback.notificationOccurred('success');
+                WebApp.sendData(JSON.stringify({
+                    action: 'request_balance',
+                    user_id: user.id
+                }));
+                WebApp.close(); // Закрываем WebApp после отправки команды
+            }
+
+            function closeApp() {
+                WebApp.close();
+            }
+
+        } else {
+            document.body.innerHTML = "<h2>Ошибка: Запустите в браузере Telegram.</h2>";
+        }
+    </script>
+</body>
+</html>
