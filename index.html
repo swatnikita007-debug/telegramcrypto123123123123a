@@ -3,100 +3,382 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Galaxy Mini App</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Cryptobot Mini App</title>
+    <!-- Подключение Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Стиль для имитации фона Telegram Mini App */
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: var(--tg-theme-bg-color);
-            color: var(--tg-theme-text-color);
-            transition: background-color 0.3s, color 0.3s;
+            font-family: 'Inter', sans-serif;
+            background-color: #1c1c1e; /* Темный фон */
+            color: #ffffff;
         }
-        h1 {
-            color: var(--tg-theme-link-color);
+        .app-container {
+            max-width: 420px; /* Типичная ширина Mini App */
+            min-height: 100vh;
+            margin: 0 auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         }
-        button {
-            background-color: var(--tg-theme-button-color);
-            color: var(--tg-theme-button-text-color);
-            border: none;
-            padding: 10px 20px;
-            margin: 10px 0;
-            border-radius: 8px;
+        .nav-item {
+            transition: all 0.2s;
             cursor: pointer;
-            width: 100%;
-            font-size: 16px;
         }
-        #user-info {
-            background-color: var(--tg-theme-secondary-bg-color);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+        .nav-item.active {
+            color: #3b82f6; /* Синий акцент */
+            border-top: 2px solid #3b82f6;
+        }
+        .card {
+            background-color: #2c2c2e;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        /* Скрываем скроллбар для эстетики */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        /* Иконки в виде SVG */
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
         }
     </style>
 </head>
 <body>
-    <h1>✨ Crypto Galaxy Mini App</h1>
 
-    <div id="user-info">
-        <h3>👤 Ваши данные (Получены из SDK):</h3>
-        <p id="tg-id">TG ID: Загрузка...</p>
-        <p id="first-name">Имя: Загрузка...</p>
-        <p id="username">Username: Загрузка...</p>
+<div id="app" class="app-container p-4">
+
+    <!-- Заголовок и Баланс (Домашняя страница) -->
+    <div id="home-view" class="view">
+        <h1 class="text-3xl font-bold mb-6 text-center">Cryptobot Wallet</h1>
+
+        <!-- Блок Баланса -->
+        <div class="card p-6 rounded-xl shadow-lg mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-sm font-semibold text-gray-400">Общий Баланс (USD)</span>
+                <span id="user-id-display" class="text-xs text-gray-500 bg-gray-700 px-2 py-1 rounded-full">ID: Loading...</span>
+            </div>
+            <div class="text-5xl font-extrabold" id="total-balance">$0.00</div>
+            <div class="flex space-x-3 mt-4">
+                <button onclick="simulateApiCall('balance')" class="btn-primary flex-1 py-3 rounded-xl font-semibold">Обновить Баланс</button>
+            </div>
+        </div>
+
+        <!-- Курсы Валют -->
+        <h2 class="text-xl font-semibold mb-4">Курсы Криптовалют</h2>
+        <div class="card p-4 rounded-xl shadow-lg">
+            <div id="rates-list" class="space-y-3">
+                <!-- Загрузка курсов -->
+                <div class="flex justify-between items-center">
+                    <div class="font-medium">USDT</div>
+                    <div class="text-green-400">1.00 USD</div>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div class="font-medium">TON</div>
+                    <div class="text-yellow-400" id="ton-rate">3.50 USD</div>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div class="font-medium">BTC</div>
+                    <div class="text-orange-400" id="btc-rate">70,000.00 USD</div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <h2>🚀 Интерактивные действия</h2>
-    <button onclick="requestBalance()">Показать баланс USDT в чате</button>
-    <button onclick="closeApp()">Закрыть WebApp</button>
-
-    <script>
-        // Проверка инициализации WebApp
-        if (window.Telegram.WebApp) {
-            const WebApp = window.Telegram.WebApp;
-            WebApp.ready();
-
-            const user = WebApp.initDataUnsafe.user;
+    <!-- Обмен Валют -->
+    <div id="exchange-view" class="view hidden">
+        <h1 class="text-2xl font-bold mb-6 text-center">Обмен Валют</h1>
+        <div class="card p-6 rounded-xl shadow-lg space-y-4">
+            <p class="text-sm text-gray-400">Обменять одну криптовалюту на другую.</p>
             
-            // 1. ПОЛУЧЕНИЕ ДАННЫХ
-            document.getElementById('tg-id').innerText = 'TG ID: ' + user.id;
-            document.getElementById('first-name').innerText = 'Имя: ' + (user.first_name || 'N/A');
-            document.getElementById('username').innerText = 'Username: ' + (user.username ? '@' + user.username : 'N/A');
+            <div>
+                <label for="exchange-amount" class="block text-sm font-medium mb-1">Сумма обмена</label>
+                <input type="number" id="exchange-amount" value="10" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" placeholder="10.00">
+            </div>
 
-            // Устанавливаем основную кнопку WebApp
-            WebApp.MainButton.text = "Открыть Кошелек";
-            WebApp.MainButton.show();
-            WebApp.MainButton.onClick(openWallet);
+            <div>
+                <label for="from-currency" class="block text-sm font-medium mb-1">Отдать</label>
+                <select id="from-currency" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600">
+                    <option value="USDT">USDT</option>
+                    <option value="TON">TON</option>
+                    <option value="BTC">BTC</option>
+                </select>
+            </div>
+
+            <div class="text-center text-gray-400">
+                <svg class="icon mx-auto my-2" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="7 13 12 18 17 13"></polyline><polyline points="7 6 12 11 17 6"></polyline>
+                </svg>
+            </div>
+
+            <div>
+                <label for="to-currency" class="block text-sm font-medium mb-1">Получить</label>
+                <select id="to-currency" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600">
+                    <option value="TON">TON</option>
+                    <option value="USDT">USDT</option>
+                    <option value="BTC">BTC</option>
+                </select>
+            </div>
+
+            <button onclick="simulateApiCall('exchange')" class="btn-primary w-full py-3 rounded-xl font-semibold mt-4">Обменять</button>
+        </div>
+    </div>
+
+    <!-- Переводы -->
+    <div id="transfer-view" class="view hidden">
+        <h1 class="text-2xl font-bold mb-6 text-center">Переводы</h1>
+        <div class="card p-6 rounded-xl shadow-lg space-y-4">
+            <p class="text-sm text-gray-400">Отправьте средства по адресу кошелька или имени пользователя (Username).</p>
+
+            <div>
+                <label for="transfer-recipient" class="block text-sm font-medium mb-1">Получатель (Username или Кошелек)</label>
+                <input type="text" id="transfer-recipient" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" placeholder="@username или адрес кошелька">
+            </div>
+
+            <div>
+                <label for="transfer-amount" class="block text-sm font-medium mb-1">Сумма</label>
+                <input type="number" id="transfer-amount" value="5" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" placeholder="0.00">
+            </div>
             
-            // 2. ОТПРАВКА ДАННЫХ (при нажатии MainButton)
-            function openWallet() {
-                // Отправляем данные (payload) боту, которые он может обработать как команду
-                const payload = {
-                    action: 'open_wallet',
-                    currency: 'USDT'
-                };
-                WebApp.sendData(JSON.stringify(payload));
-                WebApp.close();
-            }
+            <div>
+                <label for="transfer-currency" class="block text-sm font-medium mb-1">Валюта</label>
+                <select id="transfer-currency" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600">
+                    <option value="USDT">USDT</option>
+                    <option value="TON">TON</option>
+                    <option value="BTC">BTC</option>
+                </select>
+            </div>
+
+            <button onclick="simulateApiCall('transfer')" class="btn-primary w-full py-3 rounded-xl font-semibold mt-4">Отправить</button>
+        </div>
+    </div>
+
+    <!-- Заработок (Captcha) -->
+    <div id="earn-view" class="view hidden">
+        <h1 class="text-2xl font-bold mb-6 text-center">Заработок</h1>
+        <div class="card p-6 rounded-xl shadow-lg text-center space-y-4">
+            <h2 class="text-xl font-semibold">Решите капчу и получите 0.5 USDT</h2>
+            <p class="text-sm text-gray-400">Проверка, что вы не робот. Вознаграждение будет начислено мгновенно!</p>
             
-            // 3. ОТПРАВКА КОМАНДЫ (из обычной кнопки)
-            function requestBalance() {
-                // Отправляем команду боту, чтобы он выполнил действие в чате
-                WebApp.HapticFeedback.notificationOccurred('success');
-                WebApp.sendData(JSON.stringify({
-                    action: 'request_balance',
-                    user_id: user.id
-                }));
-                WebApp.close(); // Закрываем WebApp после отправки команды
-            }
+            <div id="captcha-display" class="text-4xl font-bold p-6 bg-gray-800 rounded-lg select-none">3 + 5 = ?</div>
+            
+            <div>
+                <label for="captcha-input" class="block text-sm font-medium mb-1 text-left">Ваш ответ</label>
+                <input type="number" id="captcha-input" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" placeholder="Введите число">
+            </div>
 
-            function closeApp() {
-                WebApp.close();
-            }
+            <button onclick="simulateApiCall('captcha')" class="btn-primary w-full py-3 rounded-xl font-semibold mt-4">Подтвердить</button>
+        </div>
+    </div>
+    
+    <!-- Сообщение об операции -->
+    <div id="message-box" class="fixed inset-x-0 bottom-0 mb-4 mx-4 p-4 rounded-xl shadow-2xl z-50 text-center hidden transition-opacity duration-300" style="background-color: #4CAF50; opacity: 0;">
+        <span id="message-text">Успешно!</span>
+    </div>
 
-        } else {
-            document.body.innerHTML = "<h2>Ошибка: Запустите в браузере Telegram.</h2>";
+    <!-- Нижняя Навигационная Панель -->
+    <div class="fixed bottom-0 inset-x-0 bg-gray-800 border-t border-gray-700 rounded-t-xl shadow-inner max-w-lg mx-auto">
+        <div class="flex justify-around text-gray-400 font-semibold py-2">
+            <div id="nav-home" class="nav-item active flex flex-col items-center p-2" onclick="showView('home')">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                <span class="text-xs mt-1">Главная</span>
+            </div>
+            <div id="nav-exchange" class="nav-item flex flex-col items-center p-2" onclick="showView('exchange')">
+                <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                <span class="text-xs mt-1">Обмен</span>
+            </div>
+            <div id="nav-transfer" class="nav-item flex flex-col items-center p-2" onclick="showView('transfer')">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"></path><path d="M3 11V5a2 2 0 0 1 2-2h12"></path><path d="M7 23l-4-4 4-4"></path><path d="M21 13v6a2 2 0 0 1-2 2H7"></path></svg>
+                <span class="text-xs mt-1">Перевод</span>
+            </div>
+            <div id="nav-earn" class="nav-item flex flex-col items-center p-2" onclick="showView('earn')">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"></path><path d="M16 8l-4 8-4-4"></path></svg>
+                <span class="text-xs mt-1">Заработок</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // URL вашего Python-бэкенда (FastAPI)
+    const API_BASE_URL = 'http://localhost:8000/api'; 
+    
+    // Получаем user_id. В реальном WebApp он приходит через query params (initData).
+    // Для демо используем случайный ID, который должен быть зарегистрирован в SQLite при /start
+    const getUserId = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        // В реальном WebApp это 'tgWebApp.initDataUnsafe.user.id'
+        let userId = urlParams.get('user_id'); 
+        if (!userId) {
+            userId = localStorage.getItem('demo_user_id');
+            if (!userId) {
+                userId = crypto.randomUUID(); // Генерируем новый для демо
+                localStorage.setItem('demo_user_id', userId);
+            }
         }
-    </script>
+        document.getElementById('user-id-display').textContent = `ID: ${userId.substring(0, 8)}...`;
+        return userId;
+    };
+
+    const userId = getUserId();
+    const messageBox = document.getElementById('message-box');
+    const messageText = document.getElementById('message-text');
+
+    // Функция для показа сообщений
+    function showMessage(text, isError = false) {
+        messageText.textContent = text;
+        messageBox.style.backgroundColor = isError ? '#f44336' : '#4CAF50';
+        messageBox.style.opacity = '1';
+        messageBox.classList.remove('hidden');
+        
+        setTimeout(() => {
+            messageBox.style.opacity = '0';
+            setTimeout(() => messageBox.classList.add('hidden'), 300);
+        }, 3000);
+    }
+
+    // Переключение между вкладками
+    function showView(viewId) {
+        document.querySelectorAll('.view').forEach(view => view.classList.add('hidden'));
+        document.getElementById(`${viewId}-view`).classList.remove('hidden');
+
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        document.getElementById(`nav-${viewId}`).classList.add('active');
+
+        // Обновляем баланс при переходе на главную
+        if (viewId === 'home') {
+            simulateApiCall('balance');
+        }
+    }
+
+    // Имитация API вызовов к бэкенду (FastAPI)
+    async function simulateApiCall(action) {
+        let endpoint = '';
+        let method = 'POST';
+        let data = { user_id: userId };
+
+        switch (action) {
+            case 'balance':
+                endpoint = '/balance';
+                method = 'GET';
+                break;
+            
+            case 'exchange':
+                endpoint = '/exchange';
+                data.amount = parseFloat(document.getElementById('exchange-amount').value);
+                data.from_currency = document.getElementById('from-currency').value;
+                data.to_currency = document.getElementById('to-currency').value;
+                if (data.from_currency === data.to_currency) {
+                    showMessage("Нельзя обменять валюту на саму себя.", true);
+                    return;
+                }
+                break;
+            
+            case 'transfer':
+                endpoint = '/transfer';
+                data.recipient = document.getElementById('transfer-recipient').value;
+                data.amount = parseFloat(document.getElementById('transfer-amount').value);
+                data.currency = document.getElementById('transfer-currency').value;
+                break;
+
+            case 'captcha':
+                endpoint = '/captcha';
+                const correctAnswer = 8; // Задано в HTML: 3 + 5
+                const userAnswer = parseInt(document.getElementById('captcha-input').value);
+                if (userAnswer !== correctAnswer) {
+                    showMessage("Неверный ответ! Попробуйте еще.", true);
+                    return;
+                }
+                data.reward_amount = 0.5; // Награда 0.5 USDT
+                data.currency = 'USDT';
+                break;
+
+            default:
+                showMessage("Неизвестное действие.", true);
+                return;
+        }
+
+        try {
+            // Эмуляция экспоненциальной задержки для API
+            const maxRetries = 3;
+            let response = null;
+            let success = false;
+            
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const fetchOptions = {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                    };
+                    if (method === 'POST' || method === 'PUT') {
+                        fetchOptions.body = JSON.stringify(data);
+                    } else if (method === 'GET') {
+                        // Для GET-запросов добавляем user_id в URL
+                        endpoint += `?user_id=${userId}`;
+                    }
+
+                    response = await fetch(API_BASE_URL + endpoint, fetchOptions);
+
+                    if (response.ok) {
+                        success = true;
+                        break;
+                    }
+                } catch (e) {
+                    console.error(`Попытка ${i + 1} провалилась:`, e);
+                }
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000)); // Экспоненциальная задержка
+            }
+
+            if (!success || !response.ok) {
+                throw new Error(`Ошибка API: ${response ? response.status : 'Нет ответа'}`);
+            }
+
+            const result = await response.json();
+
+            // Обработка результатов
+            switch (action) {
+                case 'balance':
+                    document.getElementById('total-balance').textContent = `$${result.total_balance.toFixed(2)}`;
+                    showMessage("Баланс обновлен.");
+                    break;
+                case 'exchange':
+                    showMessage(`Успешный обмен! Вы получили ${result.received_amount.toFixed(4)} ${result.to_currency}.`);
+                    break;
+                case 'transfer':
+                    showMessage(`Перевод ${data.amount} ${data.currency} получателю ${data.recipient} успешно отправлен.`);
+                    break;
+                case 'captcha':
+                    showMessage(`Капча решена! Вы получили ${data.reward_amount} ${data.currency}.`);
+                    document.getElementById('captcha-input').value = ''; // Очистка
+                    break;
+            }
+            
+            // Если операция изменила баланс, обновляем главную страницу
+            if (action !== 'balance') {
+                simulateApiCall('balance');
+            }
+
+        } catch (error) {
+            console.error("Глобальная ошибка операции:", error);
+            showMessage(`Ошибка: ${error.message || 'Проверьте консоль.'}`, true);
+        }
+    }
+
+    // Инициализация при загрузке
+    window.onload = function() {
+        // Устанавливаем начальный вид
+        showView('home'); 
+        // Имитация первого получения баланса
+        simulateApiCall('balance'); 
+    };
+
+</script>
+
 </body>
 </html>
